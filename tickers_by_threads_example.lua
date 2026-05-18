@@ -16,7 +16,8 @@ end
 local function countGiftBonus(player)
     local added = player:AddItem(test_gift_item);
 	if (added == nil) then
-		SendMail("Конфетка", "Конфетка не влезла в ваши карманы и была выслана на почту.", GetGUIDEntry(player:GetGUID()), 0, 61, 20, 0, 0, test_gift_item, 1)
+        local charId = tonumber(tostring(player:GetGUIDLow()))
+		SendMail("Конфетка", "Конфетка не влезла в ваши карманы и была выслана на почту.", charId, 0, 61, 0, 0, 0, test_gift_item, 1)
 		player:SendBroadcastMessage("|cff629404[-X-] |cff8bad4cКонфетка не влезла в ваши карманы и была выслана на почту.")
 	else
 		player:SendBroadcastMessage("|cff629404[-X-] |cff8bad4cВы получаете конфетку за активную игру.")
@@ -38,12 +39,14 @@ end
 
 -- работа с потоком и объектом карты
 local function calculateTestMapBonuses()
-    local testMapPlayers = GetPlayersOnMap(2) -- 2-neutral, both horde and aliance
-    for _, player in ipairs(testMapPlayers) do
+    local onlinePlayers = GetPlayersInWorld(2); -- 2-neutral, both horde and aliance
+    for _, player in ipairs(onlinePlayers) do
+        local map = player:GetMapId()
+        if map ~= test_map then return end
 		local zone = player:GetZoneId()
 		if zone ~= test_zone then return end
 		if player:IsAFK() then return end
-			
+
 		local rep = 10
 		player:SetReputation(test_faction, player:GetReputation(test_faction) + rep)
     end
@@ -58,9 +61,8 @@ local currentState = GetStateMapId()
 if currentState == -1 then -- глобальный поток WORLD
     CreateLuaEvent(calculateGlobalBonuses, 600000, 0) -- 600000 это 10 минут
 	print("[Eluna] Global online bonuses registered in WORLD state.")
+
+    CreateLuaEvent(calculateTestMapBonuses, 600000, 0) -- тоже регаем в глобальном потоке, потому что иначе не зарегается если никого не будет на нужной карте
+    print("[Eluna] Global map online bonuses registered in WORLD state.")
 end
 
-if currentState == test_map then -- отдельный поток нордскола (для теста)
-    CreateLuaEvent(calculateTestMapBonuses, 600000, 0)
-	print("[Eluna] Local map online bonuses registered in MAP state: " .. test_map)
-end
